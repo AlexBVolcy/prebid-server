@@ -333,9 +333,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{
@@ -380,9 +380,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{
@@ -433,9 +433,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: true,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -459,9 +459,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -485,9 +485,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: true,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -511,9 +511,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -537,9 +537,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: true,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -563,9 +563,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -706,9 +706,8 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
-				Cooperative: config.UserSyncCooperative{
-					PriorityGroups: [][]string{{"a", "b", "c"}},
-				},
+				PriorityGroups: [][]string{{"a", "b", "c"}},
+				Cooperative:    config.UserSyncCooperative{},
 			},
 			expectedPrivacy: privacy.Policies{},
 			expectedRequest: usersync.Request{
@@ -736,9 +735,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
@@ -767,9 +766,9 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenGDPRConfig:  config.GDPR{Enabled: true, DefaultValue: "0"},
 			givenCCPAEnabled: true,
 			givenConfig: config.UserSync{
+				PriorityGroups: [][]string{{"a", "b", "c"}},
 				Cooperative: config.UserSyncCooperative{
 					EnabledByDefault: false,
-					PriorityGroups:   [][]string{{"a", "b", "c"}},
 				},
 			},
 			expectedPrivacy: privacy.Policies{},
