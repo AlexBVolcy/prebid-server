@@ -47,10 +47,14 @@ func (p PriorityBidderEjector) Choose(uids map[string]usersync.UidWithExpiry) (s
 
 	// There are only priority keys left, check if the syncer is apart of the priority groups
 	if isSyncerPriority(p.SyncerKey, p.PriorityGroups) {
-		// Eject Oldest Priority Element
+		// Eject Oldest Element from Lowest Priority
+		lowestPriorityGroup := p.PriorityGroups[len(p.PriorityGroups)-1]
+
 		var oldestElem string = ""
 		var oldestDate int64 = math.MaxInt64
-		for key, value := range uids {
+
+		for _, key := range lowestPriorityGroup {
+			value := uids[key]
 			timeUntilExpiration := time.Until(value.Expires)
 			if timeUntilExpiration < time.Duration(oldestDate) {
 				oldestElem = key
