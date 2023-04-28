@@ -23,14 +23,14 @@ const uidTTL = 14 * 24 * time.Hour
 // To get an instance of this from a request, use ParseCookieFromRequest.
 // To write an instance onto a response, use SetCookieOnResponse.
 type Cookie struct {
-	uids     map[string]uidWithExpiry
+	uids     map[string]UidWithExpiry
 	optOut   bool
 	birthday *time.Time
 }
 
 // uidWithExpiry bundles the UID with an Expiration date.
 // After the expiration, the UID is no longer valid.
-type uidWithExpiry struct {
+type UidWithExpiry struct {
 	// UID is the ID given to a user by a particular bidder
 	UID string `json:"uid"`
 	// Expires is the time at which this UID should no longer apply.
@@ -83,7 +83,7 @@ func ParseCookie(httpCookie *http.Cookie) *Cookie {
 // NewCookie returns a new empty cookie.
 func NewCookie() *Cookie {
 	return &Cookie{
-		uids:     make(map[string]uidWithExpiry),
+		uids:     make(map[string]UidWithExpiry),
 		birthday: timestamp(),
 	}
 }
@@ -98,7 +98,7 @@ func (cookie *Cookie) SetOptOut(optOut bool) {
 	cookie.optOut = optOut
 
 	if optOut {
-		cookie.uids = make(map[string]uidWithExpiry)
+		cookie.uids = make(map[string]UidWithExpiry)
 	}
 }
 
@@ -135,8 +135,8 @@ func (cookie *Cookie) GetUIDs() map[string]string {
 	uids := make(map[string]string)
 	if cookie != nil {
 		// Extract just the uid for each bidder
-		for bidderName, uidWithExpiry := range cookie.uids {
-			uids[bidderName] = uidWithExpiry.UID
+		for bidderName, UidWithExpiry := range cookie.uids {
+			uids[bidderName] = UidWithExpiry.UID
 		}
 	}
 	return uids
@@ -213,7 +213,7 @@ func (cookie *Cookie) TrySync(key string, uid string) error {
 		return errors.New("audienceNetwork uses a UID of 0 as \"not yet recognized\".")
 	}
 
-	cookie.uids[key] = uidWithExpiry{
+	cookie.uids[key] = UidWithExpiry{
 		UID:     uid,
 		Expires: time.Now().Add(uidTTL),
 	}
@@ -227,7 +227,7 @@ func (cookie *Cookie) TrySync(key string, uid string) error {
 // the code doesn't have to worry about the cookie data storage format.
 type cookieJson struct {
 	LegacyUIDs map[string]string        `json:"uids,omitempty"`
-	UIDs       map[string]uidWithExpiry `json:"tempUIDs,omitempty"`
+	UIDs       map[string]UidWithExpiry `json:"tempUIDs,omitempty"`
 	OptOut     bool                     `json:"optout,omitempty"`
 	Birthday   *time.Time               `json:"bday,omitempty"`
 }
@@ -256,19 +256,19 @@ func (cookie *Cookie) UnmarshalJSON(b []byte) error {
 		cookie.birthday = cookieContract.Birthday
 
 		if cookie.optOut {
-			cookie.uids = make(map[string]uidWithExpiry)
+			cookie.uids = make(map[string]UidWithExpiry)
 		} else {
 			cookie.uids = cookieContract.UIDs
 
 			if cookie.uids == nil {
-				cookie.uids = make(map[string]uidWithExpiry, len(cookieContract.LegacyUIDs))
+				cookie.uids = make(map[string]UidWithExpiry, len(cookieContract.LegacyUIDs))
 			}
 
 			// Interpret "legacy" UIDs as having been expired already.
 			// This should cause us to re-sync, since it would be time for a new one.
 			for bidder, uid := range cookieContract.LegacyUIDs {
 				if _, ok := cookie.uids[bidder]; !ok {
-					cookie.uids[bidder] = uidWithExpiry{
+					cookie.uids[bidder] = UidWithExpiry{
 						UID:     uid,
 						Expires: time.Now().Add(-5 * time.Minute),
 					}
