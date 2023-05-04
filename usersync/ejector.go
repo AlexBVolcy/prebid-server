@@ -1,22 +1,20 @@
-package strategies
+package usersync
 
 import (
 	"errors"
 	"math"
 	"time"
-
-	"github.com/prebid/prebid-server/usersync"
 )
 
 type Ejector interface {
-	Choose(uids map[string]usersync.UidWithExpiry)
+	Choose(uids map[string]UidWithExpiry)
 }
 
 type OldestEjector struct {
 	nonPriorityKeys []string
 }
 
-func (o OldestEjector) Choose(uids map[string]usersync.UidWithExpiry) string {
+func (o OldestEjector) Choose(uids map[string]UidWithExpiry) string {
 	var oldestElem string = ""
 	var oldestDate int64 = math.MaxInt64
 
@@ -37,7 +35,7 @@ type PriorityBidderEjector struct {
 	OldestEjector  OldestEjector
 }
 
-func (p PriorityBidderEjector) Choose(uids map[string]usersync.UidWithExpiry) (string, error) {
+func (p PriorityBidderEjector) Choose(uids map[string]UidWithExpiry) (string, error) {
 	p.OldestEjector.nonPriorityKeys = get(uids, p.PriorityGroups)
 
 	// There are non priority keys present, let's eject one of those
@@ -77,7 +75,7 @@ func isSyncerPriority(syncer string, priorityGroups [][]string) bool {
 	return false
 }
 
-func get(uids map[string]usersync.UidWithExpiry, priorityGroups [][]string) []string {
+func get(uids map[string]UidWithExpiry, priorityGroups [][]string) []string {
 	nonPriorityKeys := []string{}
 	for key := range uids {
 		for _, group := range priorityGroups {

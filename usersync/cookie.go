@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"math"
 	"net/http"
 	"time"
 
@@ -151,25 +150,6 @@ func (cookie *Cookie) SetCookieOnResponse(w http.ResponseWriter, setSiteCookie b
 		httpCookie.Domain = domain
 	}
 
-	var currSize int = len([]byte(httpCookie.String()))
-	for cfg.MaxCookieSizeBytes > 0 && currSize > cfg.MaxCookieSizeBytes && len(cookie.uids) > 0 {
-		var oldestElem string = ""
-		var oldestDate int64 = math.MaxInt64
-		for key, value := range cookie.uids {
-			timeUntilExpiration := time.Until(value.Expires)
-			if timeUntilExpiration < time.Duration(oldestDate) {
-				oldestElem = key
-				oldestDate = int64(timeUntilExpiration)
-			}
-		}
-		delete(cookie.uids, oldestElem)
-		httpCookie = cookie.ToHTTPCookie(ttl)
-		if domain != "" {
-			httpCookie.Domain = domain
-		}
-		currSize = len([]byte(httpCookie.String()))
-	}
-
 	if setSiteCookie {
 		httpCookie.Secure = true
 		httpCookie.SameSite = http.SameSiteNoneMode
@@ -202,7 +182,7 @@ func (cookie *Cookie) HasAnyLiveSyncs() bool {
 }
 
 // TrySync tries to set the UID for some syncer key. It returns an error if the set didn't happen.
-func (cookie *Cookie) TrySync(key string, uid string) error {
+func (cookie *Cookie) TrySync(key string, uid string, cfg *config.HostCookie, ttl time.Duration, ejector PriorityBidderEjector) error {
 	if !cookie.AllowSyncs() {
 		return errors.New("The user has opted out of prebid server cookie syncs.")
 	}
@@ -211,6 +191,20 @@ func (cookie *Cookie) TrySync(key string, uid string) error {
 	// They shouldn't be sending us a sentinel value... but since they are, we're refusing to save that ID.
 	if key == string(openrtb_ext.BidderAudienceNetwork) && uid == "0" {
 		return errors.New("audienceNetwork uses a UID of 0 as \"not yet recognized\".")
+	}
+
+	httpCookie := cookie.ToHTTPCookie(ttl)
+	isCookieTooBig := len([]byte(httpCookie.String())) > cfg.MaxCookieSizeBytes
+
+	for cfg.MaxCookieSizeBytes > 0 && isCookieTooBig && len(cookie.uids) > 0 {
+		uidToDelete, err := ejector.Choose(cookie.uids)
+		if err != nil {
+			return err
+		}
+		delete(cookie.uids, uidToDelete)
+
+		httpCookie = cookie.ToHTTPCookie(ttl)
+		isCookieTooBig = len([]byte(httpCookie.String())) > cfg.MaxCookieSizeBytes
 	}
 
 	cookie.uids[key] = UidWithExpiry{
