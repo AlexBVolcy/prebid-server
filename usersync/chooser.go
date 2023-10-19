@@ -88,6 +88,9 @@ const (
 
 	// StatusBlockedByPrivacy specifies a bidder sync url is not allowed by privacy activities
 	StatusBlockedByPrivacy
+
+	// TODO: Description
+	StatusBlockedByDisabledUsersync
 )
 
 // Privacy determines which privacy policies will be enforced for a user sync request.

@@ -6,6 +6,7 @@ type UserSync struct {
 	ExternalURL    string              `mapstructure:"external_url"`
 	RedirectURL    string              `mapstructure:"redirect_url"`
 	PriorityGroups [][]string          `mapstructure:"priority_groups"`
+	Enabled        bool                `mapstructure:"enabled"`
 }
 
 // UserSyncCooperative specifies the static global default cooperative cookie sync
