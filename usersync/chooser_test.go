@@ -42,7 +42,7 @@ func TestNewChooser(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		chooser, _ := NewChooser(test.bidderSyncerLookup, test.bidderInfo).(standardChooser)
+		chooser, _ := NewChooser(test.bidderSyncerLookup, make(map[string]struct{}), test.bidderInfo).(standardChooser)
 		assert.ElementsMatch(t, test.expectedBiddersAvailable, chooser.biddersAvailable, test.description)
 	}
 }

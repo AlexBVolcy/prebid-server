@@ -61,7 +61,7 @@ func NewCookieSyncEndpoint(
 	}
 
 	return &cookieSyncEndpoint{
-		chooser: usersync.NewChooser(syncersByBidder, config.BidderInfos),
+		chooser: usersync.NewChooser(syncersByBidder, bidderHashSet, config.BidderInfos),
 		config:  config,
 		privacyConfig: usersyncPrivacyConfig{
 			gdprConfig:             config.GDPR,
@@ -104,11 +104,11 @@ func (c *cookieSyncEndpoint) Handle(w http.ResponseWriter, r *http.Request, _ ht
 		c.handleError(w, errCookieSyncOptOut, http.StatusUnauthorized)
 	case usersync.StatusBlockedByGDPR:
 		c.metrics.RecordCookieSync(metrics.CookieSyncGDPRHostCookieBlocked)
-		c.handleResponse(w, request.SyncTypeFilter, cookie, privacyMacros, nil)
+		c.handleResponse(w, request.SyncTypeFilter, cookie, privacyMacros, nil, result.BiddersEvaluated, request.Debug)
 	case usersync.StatusOK:
 		c.metrics.RecordCookieSync(metrics.CookieSyncOK)
 		c.writeSyncerMetrics(result.BiddersEvaluated)
-		c.handleResponse(w, request.SyncTypeFilter, cookie, privacyMacros, result.SyncersChosen)
+		c.handleResponse(w, request.SyncTypeFilter, cookie, privacyMacros, result.SyncersChosen, result.BiddersEvaluated, request.Debug)
 	}
 }
 
@@ -399,7 +399,7 @@ func (c *cookieSyncEndpoint) writeSyncerMetrics(biddersEvaluated []usersync.Bidd
 	}
 }
 
-func (c *cookieSyncEndpoint) handleResponse(w http.ResponseWriter, tf usersync.SyncTypeFilter, co *usersync.Cookie, m macros.UserSyncPrivacy, s []usersync.SyncerChoice) {
+func (c *cookieSyncEndpoint) handleResponse(w http.ResponseWriter, tf usersync.SyncTypeFilter, co *usersync.Cookie, m macros.UserSyncPrivacy, s []usersync.SyncerChoice, biddersEvaluated []usersync.BidderEvaluation, debug bool) {
 	status := "no_cookie"
 	if co.HasAnyLiveSyncs() {
 		status = "ok"
@@ -429,6 +429,24 @@ func (c *cookieSyncEndpoint) handleResponse(w http.ResponseWriter, tf usersync.S
 		})
 	}
 
+	if debug {
+		biddersSeen := make(map[string]struct{})
+		var debugInfo []cookieSyncResponseDebug
+		for _, bidderEval := range biddersEvaluated {
+			var debugResponse cookieSyncResponseDebug
+			debugResponse.Bidder = bidderEval.Bidder
+			if bidderEval.Status == usersync.StatusDuplicate && biddersSeen[bidderEval.Bidder] == struct{}{} {
+				debugResponse.Error = getDebugMessage(bidderEval.Status) + " synced as " + bidderEval.SyncerKey
+				debugInfo = append(debugInfo, debugResponse)
+			} else if bidderEval.Status != usersync.StatusOK {
+				debugResponse.Error = getDebugMessage(bidderEval.Status)
+				debugInfo = append(debugInfo, debugResponse)
+			}
+			biddersSeen[bidderEval.Bidder] = struct{}{}
+		}
+		response.Debug = debugInfo
+	}
+
 	c.pbsAnalytics.LogCookieSyncObject(&analytics.CookieSyncObject{
 		Status:       http.StatusOK,
 		BidderStatus: mapBidderStatusToAnalytics(response.BidderStatus),
@@ -454,6 +472,26 @@ func mapBidderStatusToAnalytics(from []cookieSyncResponseBidder) []*analytics.Co
 		}
 	}
 	return to
+}
+
+func getDebugMessage(status usersync.Status) string {
+	switch status {
+	case usersync.StatusAlreadySynced:
+		return "Already in sync"
+	case usersync.StatusBlockedByPrivacy:
+		return "Rejected by privacy"
+	case usersync.StatusBlockedByUserOptOut:
+		return "Status blocked by user opt out"
+	case usersync.StatusDuplicate:
+		return "Duplicate bidder"
+	case usersync.StatusUnknownBidder:
+		return "Unsupported bidder"
+	case usersync.StatusTypeNotSupported:
+		return "Type not supported"
+	case usersync.StatusBlockedByDisabledUsersync:
+		return "Status blocked by disabled usersync" // TODO: Check Java
+	}
+	return ""
 }
 
 type cookieSyncRequest struct {
@@ -482,6 +520,7 @@ type cookieSyncRequestFilter struct {
 type cookieSyncResponse struct {
 	Status       string                     `json:"status"`
 	BidderStatus []cookieSyncResponseBidder `json:"bidder_status"`
+	Debug        []cookieSyncResponseDebug  `json:"debug,omitempty"`
 }
 
 type cookieSyncResponseBidder struct {
@@ -494,6 +533,11 @@ type cookieSyncResponseSync struct {
 	URL         string `json:"url,omitempty"`
 	Type        string `json:"type,omitempty"`
 	SupportCORS bool   `json:"supportCORS,omitempty"`
+}
+
+type cookieSyncResponseDebug struct {
+	Bidder string `json:"bidder"`
+	Error  string `json:"error,omitempty"`
 }
 
 type usersyncPrivacyConfig struct {

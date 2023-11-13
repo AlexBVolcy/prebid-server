@@ -45,6 +45,7 @@ func TestNewCookieSyncEndpoint(t *testing.T) {
 		analytics         = MockAnalyticsRunner{}
 		fetcher           = FakeAccountsFetcher{}
 		bidders           = map[string]openrtb_ext.BidderName{"bidderA": openrtb_ext.BidderName("bidderA"), "bidderB": openrtb_ext.BidderName("bidderB")}
+		biddersKnown      = map[string]struct{}{"bidderA": {}, "bidderB": {}}
 		bidderInfo        = map[string]config.BidderInfo{"bidderA": {}, "bidderB": {}}
 	)
 
@@ -66,7 +67,7 @@ func TestNewCookieSyncEndpoint(t *testing.T) {
 	result := endpoint.(*cookieSyncEndpoint)
 
 	expected := &cookieSyncEndpoint{
-		chooser: usersync.NewChooser(syncersByBidder, bidderInfo),
+		chooser: usersync.NewChooser(syncersByBidder, biddersKnown, bidderInfo),
 		config: &config.Configuration{
 			UserSync:   configUserSync,
 			HostCookie: configHostCookie,
@@ -1581,10 +1582,21 @@ func TestCookieSyncHandleResponse(t *testing.T) {
 	syncerWithError := MockSyncer{}
 	syncerWithError.On("GetSync", syncTypeExpected, privacyMacros).Return(syncWithError, errors.New("anyError")).Maybe()
 
+	bidderEvalForDebug := []usersync.BidderEvaluation{
+		{Bidder: "Bidder1", Status: usersync.StatusAlreadySynced},
+		{Bidder: "Bidder2", Status: usersync.StatusUnknownBidder},
+		{Bidder: "Bidder4", Status: usersync.StatusBlockedByPrivacy},
+		{Bidder: "Bidder5", Status: usersync.StatusTypeNotSupported},
+		{Bidder: "Bidder6", Status: usersync.StatusBlockedByUserOptOut},
+		{Bidder: "Bidder7", Status: usersync.StatusBlockedByDisabledUsersync},
+		{Bidder: "BidderA", Status: usersync.StatusDuplicate, SyncerKey: "syncerB"},
+	}
+
 	testCases := []struct {
 		description         string
 		givenCookieHasSyncs bool
 		givenSyncersChosen  []usersync.SyncerChoice
+		givenDebug          bool
 		expectedJSON        string
 		expectedAnalytics   analytics.CookieSyncObject
 	}{
@@ -1662,6 +1674,14 @@ func TestCookieSyncHandleResponse(t *testing.T) {
 			expectedJSON:        `{"status":"no_cookie","bidder_status":[]}` + "\n",
 			expectedAnalytics:   analytics.CookieSyncObject{Status: 200, BidderStatus: []*analytics.CookieSyncBidder{}},
 		},
+		{
+			description:         "Debug is true, should see all rejected bidder eval statuses in response",
+			givenCookieHasSyncs: true,
+			givenDebug:          true,
+			givenSyncersChosen:  []usersync.SyncerChoice{},
+			expectedJSON:        `{"status":"ok","bidder_status":[],"debug":[{"bidder":"Bidder1","error":"Already in sync"},{"bidder":"Bidder2","error":"Unsupported bidder"},{"bidder":"Bidder4","error":"Rejected by privacy"},{"bidder":"Bidder5","error":"Type not supported"},{"bidder":"Bidder6","error":"Status blocked by user opt out"},{"bidder":"Bidder7","error":"Status blocked by disabled usersync"},{"bidder":"BidderA","error":"Duplicate bidder synced as syncerB"}]}` + "\n",
+			expectedAnalytics:   analytics.CookieSyncObject{Status: 200, BidderStatus: []*analytics.CookieSyncBidder{}},
+		},
 	}
 
 	for _, test := range testCases {
@@ -1677,7 +1697,14 @@ func TestCookieSyncHandleResponse(t *testing.T) {
 
 		writer := httptest.NewRecorder()
 		endpoint := cookieSyncEndpoint{pbsAnalytics: &mockAnalytics}
-		endpoint.handleResponse(writer, syncTypeFilter, cookie, privacyMacros, test.givenSyncersChosen)
+
+		var bidderEval []usersync.BidderEvaluation
+		if test.givenDebug {
+			bidderEval = bidderEvalForDebug
+		} else {
+			bidderEval = []usersync.BidderEvaluation{}
+		}
+		endpoint.handleResponse(writer, syncTypeFilter, cookie, privacyMacros, test.givenSyncersChosen, bidderEval, test.givenDebug)
 
 		if assert.Equal(t, writer.Code, http.StatusOK, test.description+":http_status") {
 			assert.Equal(t, writer.Header().Get("Content-Type"), "application/json; charset=utf-8", test.description+":http_header")

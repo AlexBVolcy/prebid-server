@@ -15,7 +15,7 @@ type Chooser interface {
 }
 
 // NewChooser returns a new instance of the standard chooser implementation.
-func NewChooser(bidderSyncerLookup map[string]Syncer, bidderInfo config.BidderInfos) Chooser {
+func NewChooser(bidderSyncerLookup map[string]Syncer, biddersKnown map[string]struct{}, bidderInfo config.BidderInfos) Chooser {
 	bidders := make([]string, 0, len(bidderSyncerLookup))
 	for k := range bidderSyncerLookup {
 		bidders = append(bidders, k)
@@ -26,6 +26,7 @@ func NewChooser(bidderSyncerLookup map[string]Syncer, bidderInfo config.BidderIn
 		biddersAvailable:         bidders,
 		bidderChooser:            standardBidderChooser{shuffler: randomShuffler{}},
 		normalizeValidBidderName: openrtb_ext.NormalizeBidderName,
+		biddersKnown:             biddersKnown,
 		bidderInfo:               bidderInfo,
 	}
 }
@@ -37,6 +38,7 @@ type Request struct {
 	Limit          int
 	Privacy        Privacy
 	SyncTypeFilter SyncTypeFilter
+	Debug          bool
 }
 
 // Cooperative specifies the settings for cooperative syncing for a given request, where bidders
@@ -116,6 +118,7 @@ type standardChooser struct {
 	biddersAvailable         []string
 	bidderChooser            bidderChooser
 	normalizeValidBidderName func(name string) (openrtb_ext.BidderName, bool)
+	biddersKnown             map[string]struct{}
 	bidderInfo               map[string]config.BidderInfo
 }
 
